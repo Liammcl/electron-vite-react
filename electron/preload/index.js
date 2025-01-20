@@ -2,19 +2,19 @@ import { ipcRenderer, contextBridge } from 'electron'
 
 // --------- Expose some API to the Renderer process ---------
 contextBridge.exposeInMainWorld('ipcRenderer', {
-  on(...args: Parameters<typeof ipcRenderer.on>) {
+  on(...args) {
     const [channel, listener] = args
     return ipcRenderer.on(channel, (event, ...args) => listener(event, ...args))
   },
-  off(...args: Parameters<typeof ipcRenderer.off>) {
+  off(...args) {
     const [channel, ...omit] = args
     return ipcRenderer.off(channel, ...omit)
   },
-  send(...args: Parameters<typeof ipcRenderer.send>) {
+  send(...args) {
     const [channel, ...omit] = args
     return ipcRenderer.send(channel, ...omit)
   },
-  invoke(...args: Parameters<typeof ipcRenderer.invoke>) {
+  invoke(...args) {
     const [channel, ...omit] = args
     return ipcRenderer.invoke(channel, ...omit)
   },
@@ -24,7 +24,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 })
 
 // --------- Preload scripts loading ---------
-function domReady(condition: DocumentReadyState[] = ['complete', 'interactive']) {
+function domReady(condition=['complete', 'interactive']) {
   return new Promise(resolve => {
     if (condition.includes(document.readyState)) {
       resolve(true)
@@ -39,12 +39,12 @@ function domReady(condition: DocumentReadyState[] = ['complete', 'interactive'])
 }
 
 const safeDOM = {
-  append(parent: HTMLElement, child: HTMLElement) {
+  append(parent, child) {
     if (!Array.from(parent.children).find(e => e === child)) {
       return parent.appendChild(child)
     }
   },
-  remove(parent: HTMLElement, child: HTMLElement) {
+  remove(parent, child) {
     if (Array.from(parent.children).find(e => e === child)) {
       return parent.removeChild(child)
     }

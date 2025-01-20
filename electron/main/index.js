@@ -8,16 +8,6 @@ import { update } from './update'
 const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-// The built directory structure
-//
-// ├─┬ dist-electron
-// │ ├─┬ main
-// │ │ └── index.js    > Electron-Main
-// │ └─┬ preload
-// │   └── index.mjs   > Preload-Scripts
-// ├─┬ dist
-// │ └── index.html    > Electron-Renderer
-//
 process.env.APP_ROOT = path.join(__dirname, '../..')
 
 export const MAIN_DIST = path.join(process.env.APP_ROOT, 'dist-electron')
@@ -39,7 +29,7 @@ if (!app.requestSingleInstanceLock()) {
   process.exit(0)
 }
 
-let win: BrowserWindow | null = null
+let win= null
 const preload = path.join(__dirname, '../preload/index.mjs')
 const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
