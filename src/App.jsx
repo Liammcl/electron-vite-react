@@ -1,12 +1,18 @@
-import { useTranslation } from 'react-i18next'; 
-import ChangeLang from '@/components/ChangLang'
+import { BrowserRouter } from "react-router-dom";
+
+import { ThemeProvider } from '@/context/ThemeContext'
+import LayoutContainer from '@/Layout'
+import { RouterView } from '@/router/routerView'
+
 function App() {
-  const { t } = useTranslation();
   return (
-    <div>
-        <div>{t('t1')}</div>
-        <ChangeLang/>
-    </div>
+    <BrowserRouter>
+    <ThemeProvider>
+      <LayoutContainer>
+      <RouterView />
+      </LayoutContainer>
+    </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

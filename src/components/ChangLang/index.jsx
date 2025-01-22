@@ -1,12 +1,15 @@
-import  { useEffect,useState,useCallback } from 'react'
-import { Select } from 'antd';
-import {langList,i18n} from '@/i18n'
+import { useEffect, useState, useCallback } from 'react'
+import { Dropdown } from 'antd';
+import { GlobalOutlined } from '@ant-design/icons';
+import { langList, i18n } from '@/i18n'
 
 export default function ChangeLange() {
-    const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+  const [currentLanguage, setCurrentLanguage] = useState(i18n.language);
+
   useEffect(() => {
     setCurrentLanguage(i18n.language);
   }, [i18n.language])
+
   const handleLanguageChange = useCallback((lang) => {
     try {
       if (i18n && typeof i18n.changeLanguage === 'function') {
@@ -17,14 +20,30 @@ export default function ChangeLange() {
       console.error('Failed to change language:', error);
     }
   }, [i18n]);
+
+  const items = langList.map(item => ({
+    key: item.code,
+    label: (
+      <div className="px-4 py-2 hover:bg-gray-100">
+        {item.name}
+      </div>
+    ),
+    onClick: () => handleLanguageChange(item.code)
+  }));
+
   return (
-    <div>
-         <Select
-          value={currentLanguage}
-          onChange={handleLanguageChange}
-          options={langList.map(item=>({label:item.name,value:item.iso}))}
-          style={{ width: '100%' }}
-        />
-    </div>
+    <Dropdown
+      menu={{ items }}
+      placement="bottomRight"
+      trigger={['hover']}
+      overlayClassName="min-w-[150px] rounded-lg shadow-lg"
+    >
+      <button className="flex items-center space-x-2 px-3 py-2 rounded-full hover:bg-gray-100">
+        <GlobalOutlined className="text-gray-600" />
+        <span className="text-gray-700">
+          {langList.find(lang => lang.code === currentLanguage)?.name}
+        </span>
+      </button>
+    </Dropdown>
   )
 }
