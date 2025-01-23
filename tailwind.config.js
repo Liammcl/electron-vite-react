@@ -1,12 +1,12 @@
 import {color} from './src/utils/color'
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   content: [
     "./src/**/*.{jsx,tsx,html}",
     "./src/components/**/*.{js,ts,jsx,tsx}",
     "./src/utils/*.{js,ts,jsx,tsx}"
   ],
-  darkMode: "class",
   theme: {
     extend: {
       colors: {
@@ -143,6 +143,6 @@ module.exports = {
         'leave-scale': 'leave-scale 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
       }
     }
-  }
-  // plugins: [require("@tailwindcss/forms")]
+  },
+  plugins: [require("tailwindcss-animate")],
 }
