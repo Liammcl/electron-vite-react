@@ -4,9 +4,11 @@ import App from './App'
 
 import './index.scss'
 
-import './demos/ipc'
-// If you want use Node.js, the`nodeIntegration` needs to be enabled in the Main process.
-// import './demos/node'
+const isElectron = window?.electron !== undefined;
+if (isElectron) {
+  import('./demos/ipc');
+
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

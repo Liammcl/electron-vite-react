@@ -8,7 +8,7 @@ export default function Header() {
   const navigate = useNavigate()
   return (
     <div className='w-full h-[45px] bg-white text-black dark:bg-black dark:text-white flex justify-between px-10 py-2 '>
-      <div>
+      <div className='cursor-pointer' onClick={() => navigate('/')}>
         <SplitText
           text="Uppeta"
           className="text-2xl font-semibold text-center"
@@ -18,7 +18,6 @@ export default function Header() {
           easing="easeOutCubic"
           threshold={0.2}
           rootMargin="-50px"
-          onClick={() => navigate('/')}
         />
       </div>
       <div className='flex items-center gap-2'>

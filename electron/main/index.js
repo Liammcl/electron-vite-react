@@ -35,24 +35,42 @@ const indexHtml = path.join(RENDERER_DIST, 'index.html')
 
 async function createWindow() {
   win = new BrowserWindow({
-    title: 'Main window',
+    title: 'Uppeta Cam',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+    width: 1200,
+    height: 800,
     webPreferences: {
       preload,
-      // Warning: Enable nodeIntegration and disable contextIsolation is not secure in production
-      // nodeIntegration: true,
-
-      // Consider using contextBridge.exposeInMainWorld
-      // Read more on https://www.electronjs.org/docs/latest/tutorial/context-isolation
-      // contextIsolation: false,
+      nodeIntegration: true,
+      webSecurity: true,
     },
   })
 
+  win.webContents.session.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:;",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+          "font-src 'self' https://fonts.gstatic.com;",
+          "img-src 'self' data: blob: *;",
+          "media-src 'self' data: blob: mediastream:;",
+          "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;"
+        ].join(' ')
+      }
+    });
+  });
+
   if (VITE_DEV_SERVER_URL) { // #298
+    console.log(VITE_DEV_SERVER_URL,'VITE_DEV_SERVER_URL');
+    
     win.loadURL(VITE_DEV_SERVER_URL)
     // Open devTool if the app is not packaged
     win.webContents.openDevTools()
   } else {
+    console.log(indexHtml,'indexHtml');
     win.loadFile(indexHtml)
   }
 
@@ -71,7 +89,16 @@ async function createWindow() {
   update(win)
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  if (process.env.NODE_ENV === 'development') {
+    app.on('certificate-error', (event, webContents, url, error, certificate, callback) => {
+      event.preventDefault();
+      callback(true);
+    });
+  }
+  
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   win = null
@@ -106,8 +133,10 @@ ipcMain.handle('open-win', (_, arg) => {
   })
 
   if (VITE_DEV_SERVER_URL) {
+    console.log(VITE_DEV_SERVER_URL,'111')
     childWindow.loadURL(`${VITE_DEV_SERVER_URL}#${arg}`)
   } else {
+    console.log(indexHtml,'222')
     childWindow.loadFile(indexHtml, { hash: arg })
   }
 })

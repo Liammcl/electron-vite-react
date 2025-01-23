@@ -6,7 +6,7 @@ export default function Home() {
   return (
     <div>
    
-<Button variant="outline" onClick={() => navigate('/about')}>跳转about</Button>
+<Button variant="outline" onClick={() => navigate('/about')}>跳转cam</Button>
 
     </div>
   )
