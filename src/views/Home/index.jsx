@@ -5,7 +5,9 @@ export default function Home() {
   const navigate = useNavigate()
   return (
     <div>
-      <Button variant="outline" onClick={() => navigate('/about')}>跳转about</Button>
+   
+<Button variant="outline" onClick={() => navigate('/about')}>跳转about</Button>
+
     </div>
   )
 }
