@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 import Webcam from 'react-webcam';
 import {
   DndContext,
@@ -17,8 +17,9 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Select } from 'antd';
 
-const SortablePhoto = ({ photo, index, onDelete }) => {
+const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
   const {
     attributes,
     listeners,
@@ -26,17 +27,17 @@ const SortablePhoto = ({ photo, index, onDelete }) => {
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: `photo-${index}`,
-  });
+  } = useSortable({ id: `photo-${index}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 1 : 0,
-    opacity: isDragging ? 0.5 : 1,
-    touchAction: 'none',
+    zIndex: isDragging ? 999 : 1,
+    opacity: isDragging ? 0.3 : 1,
   };
+
+  const isActive = activeId === `photo-${index}`;
+  const isOver = overId === `photo-${index}`;
 
   return (
     <div
@@ -44,16 +45,22 @@ const SortablePhoto = ({ photo, index, onDelete }) => {
       style={style}
       {...attributes}
       {...listeners}
-      className="relative group touch-none select-none"
+      className={`
+        relative group touch-none select-none
+        ${isActive ? 'scale-105' : ''}
+        ${isOver ? 'ring-2 ring-blue-500' : ''}
+        ${isDragging ? 'shadow-xl' : 'shadow-md'}
+        rounded-lg transition-all duration-200
+      `}
     >
       <img
         src={photo}
         alt={`照片 ${index + 1}`}
-        className="w-full h-48 object-cover rounded-lg shadow-md"
+        className="w-full h-48 object-cover rounded-lg"
       />
       <button
         onClick={(e) => {
-          e.stopPropagation(); // 防止事件冒泡
+          e.stopPropagation();
           onDelete(index);
         }}
         className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
@@ -62,6 +69,11 @@ const SortablePhoto = ({ photo, index, onDelete }) => {
           <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
       </button>
+      {isOver && !isActive && (
+        <div className="absolute inset-0 border-2 border-blue-500 rounded-lg pointer-events-none">
+          <div className="absolute inset-0 bg-blue-500 opacity-10"></div>
+        </div>
+      )}
       <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded">
         {index + 1}/4
       </div>
@@ -79,6 +91,10 @@ const Camera = () => {
   const [facingMode, setFacingMode] = useState("user");
   const [zoomLevel, setZoomLevel] = useState(1);
   const MAX_PHOTOS = 4;
+  const [cameras, setCameras] = useState([]);
+  const [selectedCamera, setSelectedCamera] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const [overId, setOverId] = useState(null);
 
   // 检查摄像头权限
   useEffect(() => {
@@ -86,7 +102,6 @@ const Camera = () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         setHasPermission(true);
-        // 记得关闭测试流
         stream.getTracks().forEach(track => track.stop());
       } catch (err) {
         console.error('Camera error:', err);
@@ -99,11 +114,131 @@ const Camera = () => {
     checkCameraPermission();
   }, []);
 
-  const videoConstraints = {
+  // 获取摄像头列表
+  useEffect(() => {
+    async function getDevices() {
+      try {
+        // 先请求权限
+        await navigator.mediaDevices.getUserMedia({ video: true })
+          .then(stream => {
+            // 获取到权限后立即停止预览流
+            stream.getTracks().forEach(track => track.stop());
+          });
+        
+        // 获取设备列表
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        console.log('Available cameras:', videoDevices);
+        setCameras(videoDevices);
+
+        // 如果有可用摄像头且未选择，则默认选择第一个
+        if (videoDevices.length > 0 && !selectedCamera) {
+          setSelectedCamera(videoDevices[0].deviceId);
+        }
+      } catch (err) {
+        console.error('Error accessing camera:', err);
+        setError('无法访问摄像头: ' + err.message);
+      }
+    }
+
+    getDevices();
+
+    // 监听设备变化
+    navigator.mediaDevices.addEventListener('devicechange', getDevices);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+    };
+  }, []);
+
+  // 修改拍照功能
+  const capture = useCallback(async () => {
+    try {
+      // 基本检查
+      if (!webcamRef.current) {
+        throw new Error('摄像头未初始化');
+      }
+
+      const videoElement = webcamRef.current.video;
+      if (!videoElement) {
+        throw new Error('视频元素未找到');
+      }
+
+      // 简化检查流程，只检查关键状态
+      if (!videoElement.srcObject) {
+        throw new Error('视频流未就绪');
+      }
+
+      // 直接尝试获取截图，不中断视频流
+      const imageSrc = webcamRef.current.getScreenshot();
+      if (!imageSrc) {
+        throw new Error('无法获取照片');
+      }
+
+      // 更新照片列表
+      setPhotos(prevPhotos => [...prevPhotos, imageSrc]);
+      setError(null);
+    } catch (err) {
+      console.error('拍照失败:', err);
+      setError(err.message);
+    }
+  }, []);
+
+  // 修改删除照片函数
+  const deletePhoto = useCallback((index) => {
+    setPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
+  }, []);
+
+  // 修改倒计时拍照功能
+  const startCountdown = useCallback(() => {
+    if (photos.length >= MAX_PHOTOS) {
+      setError('最多只能拍摄4张照片');
+      return;
+    }
+
+    setCountdown(3);
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          capture();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [capture, photos.length]);
+
+  // 设置缩放级别
+  const setZoom = (level) => {
+    setZoomLevel(level);
+    if (webcamRef.current && webcamRef.current.video) {
+      const track = webcamRef.current.video.srcObject.getVideoTracks()[0];
+      if (track.getCapabilities().zoom) {
+        track.applyConstraints({ advanced: [{ zoom: level }] });
+      }
+    }
+  };
+
+  // 更新视频约束
+  const videoConstraints = useMemo(() => ({
     width: 1280,
     height: 720,
-    facingMode: facingMode,
-    advanced: [{ zoom: zoomLevel }]
+    deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+    facingMode: selectedCamera ? undefined : facingMode,
+  }), [selectedCamera, facingMode]);
+
+  // 处理摄像头切换
+  const handleCameraChange = async (deviceId) => {
+    try {
+      setSelectedCamera(deviceId);
+      setIsCameraOn(true);
+      setError(null);
+    } catch (err) {
+      console.error('切换摄像头失败:', err);
+      setError(`切换摄像头失败: ${err.message}`);
+    }
   };
 
   // 重新配置传感器
@@ -126,7 +261,13 @@ const Camera = () => {
 
   const handleDragStart = (event) => {
     const { active } = event;
-    // 可以添加拖拽开始时的视觉反馈
+    setActiveId(active.id);
+    document.body.style.cursor = 'grabbing';
+  };
+
+  const handleDragOver = (event) => {
+    const { over } = event;
+    setOverId(over?.id || null);
   };
 
   const handleDragEnd = (event) => {
@@ -139,57 +280,55 @@ const Camera = () => {
         return arrayMove(items, oldIndex, newIndex);
       });
     }
+    
+    setActiveId(null);
+    setOverId(null);
+    document.body.style.cursor = '';
   };
 
-  // 修改拍照功能，添加数量限制
-  const capture = useCallback(() => {
-    if (photos.length >= MAX_PHOTOS) {
-      alert('最多只能拍摄4张照片');
-      return;
-    }
-    const imageSrc = webcamRef.current?.getScreenshot();
-    if (imageSrc) {
-      setPhotos((prevPhotos) => [...prevPhotos, imageSrc]);
-    }
-  }, [webcamRef, photos.length]);
+  const handleDragCancel = () => {
+    setActiveId(null);
+    setOverId(null);
+    document.body.style.cursor = '';
+  };
 
-  // 修改删除照片函数
-  const deletePhoto = useCallback((index) => {
-    setPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
-  }, []);
+  // 确保摄像头初始化完成
+  useEffect(() => {
+    if (selectedCamera && webcamRef.current && webcamRef.current.video) {
+      // 等待视频准备就绪
+      webcamRef.current.video.onloadedmetadata = () => {
+        console.log('摄像头已准备就绪');
+      };
+    }
+  }, [selectedCamera]);
 
-  // 倒计时拍照
-  const startCountdown = useCallback(() => {
-    setCountdown(3);
-    const timer = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          capture();
-          return 0;
+  // 监听摄像头变化
+  useEffect(() => {
+    // 监听设备变化
+    const handleDeviceChange = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        setCameras(videoDevices);
+
+        // 检查当前选中的摄像头是否还存在
+        if (selectedCamera && !videoDevices.some(device => device.deviceId === selectedCamera)) {
+          // 如果当前选中的摄像头不存在了，切换到第一个可用的摄像头
+          if (videoDevices.length > 0) {
+            handleCameraChange(videoDevices[0].deviceId);
+          }
         }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [capture]);
-
-  // 切换前后摄像头
-  const toggleCamera = () => {
-    setFacingMode(prevMode => prevMode === "user" ? "environment" : "user");
-  };
-
-  // 设置缩放级别
-  const setZoom = (level) => {
-    setZoomLevel(level);
-    if (webcamRef.current && webcamRef.current.video) {
-      const track = webcamRef.current.video.srcObject.getVideoTracks()[0];
-      if (track.getCapabilities().zoom) {
-        track.applyConstraints({ advanced: [{ zoom: level }] });
+      } catch (err) {
+        console.error('获取设备列表失败:', err);
+        setError('获取设备列表失败: ' + err.message);
       }
-    }
-  };
+    };
+
+    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    return () => {
+      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    };
+  }, [selectedCamera]);
 
   // 显示错误信息
   if (error) {
@@ -235,93 +374,139 @@ const Camera = () => {
   }
 
   return (
-    <div className="mx-auto p-4   w-full h-auto">
-      {/* 添加照片计数 */}
-      <div className="text-center mb-4">
-        <span className="text-lg font-semibold">
-          已拍摄 {photos.length}/{MAX_PHOTOS} 张
-        </span>
+    <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
+      {/* 标题和摄像头选择区域 */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+          <h2 className="text-2xl font-semibold tracking-tight">拍照上传</h2>
+        
+        </div>
+        
+        {/* 照片计数器 */}
+        <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-700">已拍摄照片</span>
+          <span className="text-sm font-semibold bg-gray-200 px-2.5 py-0.5 rounded-full">
+            {photos.length}/{MAX_PHOTOS}
+          </span>
+        </div>
       </div>
 
-      <div className="flex flex-col items-center mb-8">
-        <div className="relative w-full max-w-2xl rounded-lg overflow-hidden shadow-lg bg-white">
-          {isCameraOn ? (
-            <div className="aspect-video md:h-[480px] lg:h-[720px]">
-              <Webcam
-                ref={webcamRef}
-                audio={false}
-                screenshotFormat="image/jpeg"
-                videoConstraints={videoConstraints}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ) : (
-            <div className="w-full h-96 bg-gray-200 flex items-center justify-center">
-              <span className="text-gray-500">摄像头已关闭</span>
-            </div>
+      {/* 摄像头预览区域 */}
+      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+        <div className="relative aspect-video">
+          {isCameraOn && (
+            <Webcam
+              ref={webcamRef}
+              audio={false}
+              screenshotFormat="image/jpeg"
+              videoConstraints={videoConstraints}
+              className="w-full h-full object-cover"
+              onUserMediaError={(err) => {
+                console.error('摄像头错误:', err);
+                setError('摄像头访问失败: ' + err.message);
+                setIsCameraOn(false);
+              }}
+              onUserMedia={(stream) => {
+                console.log('摄像头已连接');
+                setError(null);
+              }}
+              mirrored={facingMode === "user"} // 前置摄像头镜像显示
+            />
           )}
           
           {/* 倒计时显示 */}
           {countdown > 0 && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-6xl text-white font-bold">{countdown}</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+              <span className="text-6xl text-white font-bold animate-pulse">
+                {countdown}
+              </span>
             </div>
           )}
         </div>
 
         {/* 控制按钮组 */}
-        <div className="mt-4 flex flex-wrap gap-4 justify-center">
-          {/* 切换摄像头按钮 */}
-          <button
-            onClick={toggleCamera}
-            className="px-4 py-2 rounded-full bg-gray-500 hover:bg-gray-600 text-white"
-          >
-            切换摄像头
-          </button>
+        <div className="border-t p-4">
+          <div className="flex flex-wrap gap-3 justify-center">
+          {cameras.length > 0 && (
+            <div className="w-full md:w-72">
+              <Select
+               variant='filled'
+                value={selectedCamera}
+                onChange={handleCameraChange}
+                className="w-full"
+                placeholder="选择摄像头"
+                options={cameras.map((camera) => ({
+                  label: camera.label || `摄像头 ${cameras.indexOf(camera) + 1}`,
+                  value: camera.deviceId,
+                }))}
+              />
+            </div>
+          )}
 
-          {/* 缩放按钮组 */}
-          <div className="flex gap-2">
-            {[1, 2, 3, 5].map((zoom) => (
-              <button
-                key={zoom}
-                onClick={() => setZoom(zoom)}
-                className={`px-4 py-2 rounded-full ${
-                  zoomLevel === zoom
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                {zoom}x
-              </button>
-            ))}
+            <div className="flex gap-2">
+              {[1, 2, 3, 5].map((zoom) => (
+                <button
+                  key={zoom}
+                  onClick={() => setZoom(zoom)}
+                  className={`inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 
+                    ${zoomLevel === zoom 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                >
+                  {zoom}x
+                </button>
+              ))}
+            </div>
+
+            <button
+              onClick={capture}
+              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+              className={`
+                inline-flex items-center justify-center rounded-md text-sm font-medium 
+                transition-colors focus-visible:outline-none focus-visible:ring-2 
+                focus-visible:ring-offset-2 h-10 px-4 py-2
+                ${photos.length >= MAX_PHOTOS || !isCameraOn
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-blue-600 text-white shadow hover:bg-blue-700'}
+              `}
+            >
+              立即拍照
+            </button>
+
+            <button
+              onClick={startCountdown}
+              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+              className={`
+                inline-flex items-center justify-center rounded-md text-sm font-medium 
+                transition-colors focus-visible:outline-none focus-visible:ring-2 
+                focus-visible:ring-offset-2 h-10 px-4 py-2
+                ${photos.length >= MAX_PHOTOS || !isCameraOn
+                  ? 'bg-gray-300 cursor-not-allowed'
+                  : 'bg-indigo-600 text-white shadow hover:bg-indigo-700'}
+              `}
+            >
+              3秒倒计时
+            </button>
           </div>
-
-          {/* 拍照按钮组 */}
-          <button
-            onClick={capture}
-            className="px-4 py-2 rounded-full bg-green-500 hover:bg-green-600 text-white"
-          >
-            立即拍照
-          </button>
-
-          <button
-            onClick={startCountdown}
-            className="px-4 py-2 rounded-full bg-indigo-500 hover:bg-indigo-600 text-white"
-          >
-            3秒倒计时拍照
-          </button>
         </div>
       </div>
 
-      {/* 修改照片预览区，添加拖拽功能 */}
+      {/* 照片预览区域 */}
       {photos.length > 0 && (
-        <div className="mt-8 h-auto overflow-y-auto">
-          <h2 className="text-xl font-semibold mb-4">照片预览（可拖拽排序）</h2>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium">照片预览</h3>
+            <span className="text-sm text-gray-500">拖拽可调整顺序</span>
+          </div>
+          
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
           >
             <SortableContext
               items={photos.map((_, index) => `photo-${index}`)}
@@ -334,11 +519,32 @@ const Camera = () => {
                     photo={photo}
                     index={index}
                     onDelete={deletePhoto}
+                    activeId={activeId}
+                    overId={overId}
                   />
                 ))}
               </div>
             </SortableContext>
           </DndContext>
+        </div>
+      )}
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">出错了</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
