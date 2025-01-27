@@ -70,13 +70,20 @@ export default defineConfig(({ command }) => {
       cors: true, 
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; worker-src 'self' blob:;"
-
+        'Content-Security-Policy': [
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval';",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+          "font-src 'self' https://fonts.gstatic.com;",
+          "img-src 'self' data: blob: *;",
+          "media-src 'self' data: blob: mediastream:;",
+          "connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;"
+        ].join(' ')
       }, 
-      // https: {
-      //   key: fs.readFileSync(path.resolve(__dirname, 'cert/key.pem')),
-      //   cert: fs.readFileSync(path.resolve(__dirname, 'cert/cert.pem')),
-      // },
+      https: {
+        key: fs.readFileSync(path.resolve(__dirname, 'cert/key.pem')),
+        cert: fs.readFileSync(path.resolve(__dirname, 'cert/cert.pem')),
+      },
       // hmr: {
       //   protocol: 'ws',
       //   host: '0.0.0.0',  // 修改这里

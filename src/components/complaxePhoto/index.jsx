@@ -60,7 +60,7 @@ useEffect(()=>{
           ))
         }
       </ul>
-      <Button className='mt-5' type='primary' onClick={generate}>生成图片</Button>
+      <Button className='mt-5' type='primary' onClick={()=>generate()}>生成图片</Button>
     </div>
   )
 }

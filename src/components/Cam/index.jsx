@@ -17,7 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Select } from 'antd';
+import { Button, Select } from 'antd';
 import gifshot from 'gifshot';
 import { useRootStore } from '@/context/rootContext';
 const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
@@ -485,7 +485,7 @@ const Camera = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-8">
+    <div className="w-full max-w-4xl mx-auto xl:p-6 p-1 space-y-8">
       {/* 标题和摄像头选择区域 */}
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -503,96 +503,102 @@ const Camera = () => {
       </div>
 
       {/* 摄像头预览区域 */}
-      <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
-        <div className="relative aspect-video">
-          {isCameraOn && (
-            <Webcam
-              ref={webcamRef}
-              audio={false}
-              screenshotFormat="image/jpeg"
-              videoConstraints={videoConstraints}
-              className="w-full h-full object-cover"
-              onUserMediaError={(err) => {
-                console.error('摄像头错误:', err);
-                setError('摄像头访问失败: ' + err.message);
-                setIsCameraOn(false);
-              }}
-              onUserMedia={(stream) => {
-                console.log('摄像头已连接');
-                setError(null);
-              }}
-              mirrored={facingMode === "user"} // 前置摄像头镜像显示
-            />
-          )}
-          
-          {/* 倒计时显示 */}
-          {countdown > 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-              <span className="text-6xl text-white font-bold animate-pulse">
-                {countdown}
-              </span>
-            </div>
-          )}
+      <div className="overflow-hidden rounded-xl border-0 md:border bg-white shadow-sm mx-[-8px] md:mx-0 border-x-2 md:border-x border-gray-200">
+        <div className="relative w-full">
+          {/* 修改这里的高度计算方式 */}
+          <div className="relative w-full h-[50vh] md:pb-[56.25%] md:h-auto">
+            {isCameraOn && (
+              <Webcam
+                ref={webcamRef}
+                audio={false}
+                screenshotFormat="image/jpeg"
+                videoConstraints={videoConstraints}
+                className="absolute inset-0 w-full h-full object-cover"
+                onUserMediaError={(err) => {
+                  console.error('摄像头错误:', err);
+                  setError('摄像头访问失败: ' + err.message);
+                  setIsCameraOn(false);
+                }}
+                onUserMedia={(stream) => {
+                  console.log('摄像头已连接');
+                  setError(null);
+                }}
+                mirrored={facingMode === "user"}
+              />
+            )}
+            
+            {/* 倒计时显示 */}
+            {countdown > 0 && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                <span className="text-6xl md:text-8xl text-white font-bold animate-pulse">
+                  {countdown}
+                </span>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* 控制按钮组 */}
+        {/* 控制按钮组 - 优化移动端布局 */}
         <div className="border-t p-4">
-          <div className="flex flex-wrap gap-3 justify-center">
-          {cameras.length > 0 && (
-            <div className="w-full md:w-72">
-              <Select
-               variant='filled'
-                value={selectedCamera}
-                onChange={handleCameraChange}
-                className="w-full"
-                placeholder="选择摄像头"
-                options={cameras.map((camera) => ({
-                  label: camera.label || `摄像头 ${cameras.indexOf(camera) + 1}`,
-                  value: camera.deviceId,
-                }))}
-              />
-            </div>
-          )}
+          <div className="flex flex-col gap-4">
+            {/* 摄像头选择下拉框 */}
+            {cameras.length > 0 && (
+              <div className="w-full">
+                <Select
+                  variant='filled'
+                  value={selectedCamera}
+                  onChange={handleCameraChange}
+                  className="w-full"
+                  placeholder="选择摄像头"
+                  options={cameras.map((camera) => ({
+                    label: camera.label || `摄像头 ${cameras.indexOf(camera) + 1}`,
+                    value: camera.deviceId,
+                  }))}
+                />
+              </div>
+            )}
 
-            <div className="flex gap-2">
+            {/* 缩放控制按钮组 */}
+            <div className="grid grid-cols-4 gap-2">
               {[1, 2, 3, 5].map((zoom) => (
-                <button
+                <Button
                   key={zoom}
+                  type="primary"
                   onClick={() => setZoom(zoom)}
-                  className={`inline-flex items-center justify-center rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 
+                  className={`
                     ${zoomLevel === zoom 
                       ? 'bg-blue-600 text-white hover:bg-blue-700' 
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                    }`}
+                    }
+                  `}
                 >
                   {zoom}x
-                </button>
+                </Button>
               ))}
             </div>
 
-            {renderCaptureButton()}
-
-            <button
-              onClick={startCountdown}
-              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              className={`
-                inline-flex items-center justify-center rounded-md text-sm font-medium 
-                transition-colors focus-visible:outline-none focus-visible:ring-2 
-                focus-visible:ring-offset-2 h-10 px-4 py-2
-                ${photos.length >= MAX_PHOTOS || !isCameraOn
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white shadow hover:bg-indigo-700'}
-              `}
-            >
-              3秒倒计时
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              {renderCaptureButton()}
+              <Button
+              type='primary'
+                onClick={startCountdown}
+                disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+                className={`
+                  ${photos.length >= MAX_PHOTOS || !isCameraOn
+                    ? 'bg-gray-300 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white shadow hover:bg-indigo-700'}
+                `}
+              >
+                3秒倒计时
+              </Button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 照片预览区域 */}
+      {/* 照片预览区域 - 优化网格布局 */}
       {photos.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-4 mt-8">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">照片预览</h3>
             <span className="text-sm text-gray-500">拖拽可调整顺序</span>
@@ -610,7 +616,7 @@ const Camera = () => {
               items={photos.map((_, index) => `photo-${index}`)}
               strategy={horizontalListSortingStrategy}
             >
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 {photos.map((photo, index) => (
                   <SortablePhoto
                     key={`photo-${index}`}
