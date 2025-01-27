@@ -5,9 +5,9 @@ const RootStoreContext = createContext({});
 
 export const RootStoreProvider = ({ children }) => {
   const [supabase] = useState(() => createSupabase());
-
+  const [photos,setPhotos]=useState([])
   return (
-    <RootStoreContext.Provider value={{ supabase }}>
+    <RootStoreContext.Provider value={{ supabase,setPhotos,photos }}>
       {children}
     </RootStoreContext.Provider>
   );

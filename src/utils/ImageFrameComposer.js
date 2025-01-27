@@ -1,4 +1,4 @@
-class ImageFrameComposer {
+export class ImageFrameComposer {
   constructor(canvas, options = {}) {
     if (!(canvas instanceof HTMLCanvasElement)) {
       throw new Error("Canvas element is required");
@@ -11,113 +11,14 @@ class ImageFrameComposer {
     });
 
     this.frameImage = null;
-    this.contentImage = null;
+    this.contentImages = [];
     this.maxWidth = options.maxWidth || 800;
     this.onRenderComplete = options.onRenderComplete || null;
 
-    // 创建内联的 Worker
-    const workerCode = `
-        class RegionFinder {
-          constructor(imageData, width, height, options = {}) {
-            this.data = new Uint8ClampedArray(imageData.data);
-            this.width = width;
-            this.height = height;
-            this.visitedArray = new Uint8Array(width * height);
-            this.minRegionSize = options.minRegionSize || 10;
-            this.blockSize = options.blockSize || 4;
-            
-            this.stackSize = 0;
-            this.maxStackSize = 1024 * 1024;
-            this.stackArray = new Int32Array(this.maxStackSize * 2);
-          }
-  
-          pushStack(x, y) {
-            if (this.stackSize >= this.maxStackSize) return false;
-            this.stackArray[this.stackSize * 2] = x;
-            this.stackArray[this.stackSize * 2 + 1] = y;
-            this.stackSize++;
-            return true;
-          }
-  
-          popStack() {
-            if (this.stackSize === 0) return null;
-            this.stackSize--;
-            return {
-              x: this.stackArray[this.stackSize * 2],
-              y: this.stackArray[this.stackSize * 2 + 1]
-            };
-          }
-  
-          findRegions() {
-            const regions = [];
-            const blockSize = this.blockSize;
-  
-            for (let y = 0; y < this.height; y += blockSize) {
-              for (let x = 0; x < this.width; x += blockSize) {
-                const index = (y * this.width + x) * 4;
-                if (this.data[index + 3] < 128 && !this.visitedArray[y * this.width + x]) {
-                  const region = this.floodFill(x, y);
-                  if (region && 
-                      region.maxX - region.minX > this.minRegionSize && 
-                      region.maxY - region.minY > this.minRegionSize) {
-                    regions.push(region);
-                  }
-                }
-              }
-            }
-            return regions;
-          }
-  
-          floodFill(startX, startY) {
-            const region = {
-              minX: startX,
-              minY: startY,
-              maxX: startX,
-              maxY: startY
-            };
-  
-            this.stackSize = 0;
-            if (!this.pushStack(startX, startY)) return null;
-  
-            while (this.stackSize > 0) {
-              const point = this.popStack();
-              const { x, y } = point;
-              const pos = y * this.width + x;
-  
-              if (this.visitedArray[pos]) continue;
-  
-              const index = pos * 4;
-              if (this.data[index + 3] >= 128) continue;
-  
-              this.visitedArray[pos] = 1;
-              region.minX = Math.min(region.minX, x);
-              region.minY = Math.min(region.minY, y);
-              region.maxX = Math.max(region.maxX, x);
-              region.maxY = Math.max(region.maxY, y);
-  
-              if (x + 1 < this.width) this.pushStack(x + 1, y);
-              if (x - 1 >= 0) this.pushStack(x - 1, y);
-              if (y + 1 < this.height) this.pushStack(x, y + 1);
-              if (y - 1 >= 0) this.pushStack(x, y - 1);
-            }
-  
-            return region;
-          }
-        }
-  
-        self.onmessage = function(e) {
-          const { type, data } = e.data;
-          if (type === 'FIND_REGIONS') {
-            const { imageData, width, height, minRegionSize, blockSize } = data;
-            const finder = new RegionFinder(imageData, width, height, { minRegionSize, blockSize });
-            const regions = finder.findRegions();
-            self.postMessage({ type: 'REGIONS_FOUND', data: { regions } });
-          }
-        };
-      `;
-
-    const blob = new Blob([workerCode], { type: "application/javascript" });
-    this.worker = new Worker(URL.createObjectURL(blob));
+    // 修改 Worker 创建方式
+    this.worker = new Worker(new URL('./worker.js', import.meta.url), {
+      type: 'module'
+    });
 
     // 处理 Worker 消息
     this.worker.onmessage = (e) => {
@@ -185,13 +86,17 @@ class ImageFrameComposer {
     }
   }
 
-  async setContentImage(source) {
+  async setContentImages(sources) {
     try {
-      this.contentImage = await this.loadImage(source);
+      // 清空现有图片
+      this.contentImages = [];
+      // 加载所有图片
+      const promises = sources.map(source => this.loadImage(source));
+      this.contentImages = await Promise.all(promises);
       this.render();
       return true;
     } catch (error) {
-      console.error("Failed to set content image:", error);
+      console.error("Failed to set content images:", error);
       return false;
     }
   }
@@ -220,20 +125,24 @@ class ImageFrameComposer {
   }
 
   renderImages(regions) {
-    if (!this.contentImage) return;
+    if (!this.contentImages.length || this.contentImages.length === 0) return;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    regions.forEach((region) => {
+    // 确保regions和图片数量匹配
+    regions.forEach((region, index) => {
+      // 循环使用图片
+      const contentImage = this.contentImages[index % this.contentImages.length];
+      
       const width = region.maxX - region.minX;
       const height = region.maxY - region.minY;
 
       const scale = Math.max(
-        width / this.contentImage.width,
-        height / this.contentImage.height
+        width / contentImage.width,
+        height / contentImage.height
       );
-      const scaledWidth = this.contentImage.width * scale;
-      const scaledHeight = this.contentImage.height * scale;
+      const scaledWidth = contentImage.width * scale;
+      const scaledHeight = contentImage.height * scale;
 
       const x = region.minX + (width - scaledWidth) / 2;
       const y = region.minY;
@@ -242,7 +151,7 @@ class ImageFrameComposer {
       this.ctx.beginPath();
       this.ctx.rect(region.minX, region.minY, width, height);
       this.ctx.clip();
-      this.ctx.drawImage(this.contentImage, x, y, scaledWidth, scaledHeight);
+      this.ctx.drawImage(contentImage, x, y, scaledWidth, scaledHeight);
       this.ctx.restore();
     });
 
@@ -256,7 +165,7 @@ class ImageFrameComposer {
   }
 
   render() {
-    if (!this.frameImage || !this.contentImage) return false;
+    if (!this.frameImage || !this.contentImages.length) return false;
 
     const { width, height } = this.initializeCanvas();
 

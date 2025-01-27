@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Select } from 'antd';
 import gifshot from 'gifshot';
-
+import { useRootStore } from '@/context/rootContext';
 const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
   const {
     attributes,
@@ -84,8 +84,8 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
 };
 
 const Camera = () => {
+  const {photos,setPhotos}=useRootStore()
   const webcamRef = useRef(null);
-  const [photos, setPhotos] = useState([]);
   const [burstSets, setBurstSets] = useState([]);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [hasPermission, setHasPermission] = useState(null);

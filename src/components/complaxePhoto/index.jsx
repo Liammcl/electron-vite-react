@@ -1,109 +1,66 @@
-import React, { useState, useRef } from 'react';
-import { Button, Card, Col, Row, message } from 'antd';
-import { CloseOutlined } from '@ant-design/icons';
-import cv2 from 'opencv-js';
+import {useRef,useEffect,useState} from 'react'
+import {ImageFrameComposer}from '@/utils/ImageFrameComposer'
+import { Button,message } from 'antd'
+import { useRootStore } from '@/context/rootContext'
+// 修改图片导入方式
+const FrameImg1 = new URL('@/assets/frame1.png', import.meta.url).href
+const FrameImg2 = new URL('@/assets/frame2.png', import.meta.url).href
+const FrameImg3 = new URL('@/assets/frame3.png', import.meta.url).href
 
-const PhotoCollage = ({ borderImage }) => {
-  const [photos, setPhotos] = useState([]);
-  const canvasRef = useRef(null);
-
-  const capturePhoto = () => {
-    if (photos.length < getMaxPhotos(borderImage)) {
-      setPhotos(prev => [...prev, '/api/placeholder/300/300']);
-    } else {
-      message.warning('已达到最大照片数量');
-    }
-  };
-
-  const removePhoto = (index) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const composeCollage = () => {
-    const usableAreas = getUsableAreas(borderImage);
-    const canvas = document.createElement('canvas');
-    canvas.width = 600;
-    canvas.height = 600;
-    const ctx = canvas.getContext('2d');
-
-    photos.forEach((photo, index) => {
-      const [x, y, w, h] = usableAreas[index];
-      const img = new Image();
-      img.onload = () => {
-        ctx.drawImage(img, x, y, w, h);
-      };
-      img.src = photo;
+const framelist =[
+  FrameImg1,FrameImg2,FrameImg3
+]
+export default function ComplaxePhone() {
+  const {photos}=useRootStore()
+  const canvasRef=useRef(null)
+  const composer=useRef(null)
+  const [active,setActive] =useState(0)
+  const init =()=>{
+    if(composer.current) return ;
+     composer.current = new ImageFrameComposer(canvasRef.current, {
+      maxWidth: 400,
+      minRegionSize: 10, // 忽略小于 10px 的区域
+      blockSize: 4, // 每 4 像素扫描一次
+      onRenderComplete: () => {
+        console.log('渲染完成')
+      },
     });
-
-    return canvas.toDataURL('image/jpeg');
-  };
-
-  return (
-    <Card className="p-4 max-w-md mx-auto">
-      <Button 
-        onClick={capturePhoto}
-        disabled={photos.length >= getMaxPhotos(borderImage)}
-        type="primary"
-        block
-        className="mb-4"
-      >
-        Add Photo ({photos.length}/{getMaxPhotos(borderImage)})
-      </Button>
-
-      <Row gutter={8}>
-        {photos.map((photo, index) => (
-          <Col key={index} span={12}>
-            <div className="relative">
-              <img 
-                src={photo} 
-                alt={`Photo ${index + 1}`} 
-                className="w-full h-40 object-cover"
-              />
-              <Button 
-                onClick={() => removePhoto(index)}
-                type="text"
-                className="absolute top-0 right-0 bg-red-500 text-white p-1"
-              >
-                <CloseOutlined />
-              </Button>
-            </div>
-          </Col>
-        ))}
-      </Row>
-
-      {photos.length > 0 && (
-        <Button 
-          onClick={() => {
-            const collage = composeCollage();
-            console.log(collage);
-          }}
-          type="primary"
-          block
-          className="mt-4"
-        >
-          Generate Collage
-        </Button>
-      )}
-    </Card>
-  );
-};
-
-function getUsableAreas(borderImage) {
-  const img = cv2.imread(borderImage);
-  const gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY);
-  const  thresh = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY_INV);
-  const contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[0];
-
-  const usableAreas = [];
-  for (const cnt of contours) {
-    const [x, y, w, h] = cv2.boundingRect(cnt);
-    usableAreas.push([x, y, w, h]);
   }
-  return usableAreas;
-}
+  
+  useEffect(()=>{
+    init()
+  },[])
 
-function getMaxPhotos(borderImage) {
-  return getUsableAreas(borderImage).length;
+  const generate = async () => {
+    if (!photos || photos.length === 0) {
+      message.error('没有可用的图片')
+      return
+    }
+    try {
+      await composer.current.setFrameImage(framelist[active])
+      // 使用 photos 中的第一张图片
+      const _photos=photos.map(s=>s.src)
+      await composer.current.setContentImages(_photos)
+    } catch (error) {
+      console.error('图片加载失败:', error)
+    }
+  }
+useEffect(()=>{
+  generate()
+},[active])
+  return (
+    <div>
+      <canvas ref={canvasRef}></canvas>
+      <ul className='flex justify-start items-center gap-2'> 
+        {
+          framelist.map((v,index)=>(
+          <li key={index} className={`${active===index? 'border-2  border-primary-500':'border-2 border-transparent'}  rounded-md select-none cursor-pointer `}  onClick={()=>{setActive(index)}}>
+            <img draggable={false} src={v} width={200} height={300} alt="" />
+          </li>
+          ))
+        }
+      </ul>
+      <Button className='mt-5' type='primary' onClick={generate}>生成图片</Button>
+    </div>
+  )
 }
-
-export default PhotoCollage;

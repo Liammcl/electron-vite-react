@@ -1,6 +1,7 @@
 export const color = {
     primary: {
       50: "#eff8ff",
+      500:'#f1f'
     },
     light:{
       50:"#ffffff",

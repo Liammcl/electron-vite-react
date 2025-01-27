@@ -70,11 +70,13 @@ export default defineConfig(({ command }) => {
       cors: true, 
       headers: {
         'Access-Control-Allow-Origin': '*',
+        'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline' blob:; worker-src 'self' blob:;"
+
       }, 
-      https: {
-        key: fs.readFileSync(path.resolve(__dirname, 'cert/key.pem')),
-        cert: fs.readFileSync(path.resolve(__dirname, 'cert/cert.pem')),
-      },
+      // https: {
+      //   key: fs.readFileSync(path.resolve(__dirname, 'cert/key.pem')),
+      //   cert: fs.readFileSync(path.resolve(__dirname, 'cert/cert.pem')),
+      // },
       // hmr: {
       //   protocol: 'ws',
       //   host: '0.0.0.0',  // 修改这里
