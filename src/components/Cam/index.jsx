@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Select } from 'antd';
+import gifshot from 'gifshot';
 
 const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
   const {
@@ -54,9 +55,10 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
       `}
     >
       <img
-        src={photo}
+        src={photo.src}
         alt={`照片 ${index + 1}`}
         className="w-full h-48 object-cover rounded-lg"
+        draggable={false}
       />
       <button
         onClick={(e) => {
@@ -84,6 +86,7 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
 const Camera = () => {
   const webcamRef = useRef(null);
   const [photos, setPhotos] = useState([]);
+  const [burstSets, setBurstSets] = useState([]);
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [hasPermission, setHasPermission] = useState(null);
   const [error, setError] = useState(null);
@@ -95,6 +98,8 @@ const Camera = () => {
   const [selectedCamera, setSelectedCamera] = useState(null);
   const [activeId, setActiveId] = useState(null);
   const [overId, setOverId] = useState(null);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const BURST_COUNT = 5;
 
   // 检查摄像头权限
   useEffect(() => {
@@ -153,40 +158,68 @@ const Camera = () => {
   // 修改拍照功能
   const capture = useCallback(async () => {
     try {
-      // 基本检查
       if (!webcamRef.current) {
         throw new Error('摄像头未初始化');
       }
 
-      const videoElement = webcamRef.current.video;
-      if (!videoElement) {
-        throw new Error('视频元素未找到');
+      setIsCapturing(true);
+      const burstShots = [];
+
+      // 连续拍摄
+      for (let i = 0; i < BURST_COUNT; i++) {
+        const imageSrc = webcamRef.current.getScreenshot();
+        if (!imageSrc) {
+          throw new Error('无法获取照片');
+        }
+        burstShots.push(imageSrc);
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // 简化检查流程，只检查关键状态
-      if (!videoElement.srcObject) {
-        throw new Error('视频流未就绪');
-      }
+      // 生成唯一ID，用于关联主照片和连拍组
+      const burstId = Date.now().toString();
 
-      // 直接尝试获取截图，不中断视频流
-      const imageSrc = webcamRef.current.getScreenshot();
-      if (!imageSrc) {
-        throw new Error('无法获取照片');
-      }
+      // 生成 GIF
+      gifshot.createGIF({
+        images: burstShots,
+        gifWidth: 480,
+        gifHeight: 360,
+        interval: 0.3,
+        progressCallback: (progress) => {
+          console.log('GIF 生成进度：', Math.round(progress * 100) + '%');
+        },
+      }, (obj) => {
+        if (!obj.error) {
+          // 将主照片和连拍数据一起保存
+          setPhotos(prevPhotos => [...prevPhotos, {
+            id: burstId,
+            src: burstShots[0]
+          }]);
+          
+          setBurstSets(prevSets => [...prevSets, {
+            id: burstId,
+            photos: burstShots,
+            gif: obj.image
+          }]);
+        } else {
+          console.error('GIF 生成失败：', obj.error);
+        }
+        setIsCapturing(false);
+      });
 
-      // 更新照片列表
-      setPhotos(prevPhotos => [...prevPhotos, imageSrc]);
       setError(null);
     } catch (err) {
       console.error('拍照失败:', err);
       setError(err.message);
+      setIsCapturing(false);
     }
   }, []);
 
   // 修改删除照片函数
   const deletePhoto = useCallback((index) => {
+    const photoToDelete = photos[index];
     setPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
-  }, []);
+    setBurstSets(prevSets => prevSets.filter(set => set.id !== photoToDelete.id));
+  }, [photos]);
 
   // 修改倒计时拍照功能
   const startCountdown = useCallback(() => {
@@ -330,6 +363,84 @@ const Camera = () => {
     };
   }, [selectedCamera]);
 
+  // 修改拍照按钮状态
+  const renderCaptureButton = () => (
+    <button
+      onClick={capture}
+      disabled={photos.length >= MAX_PHOTOS || !isCameraOn || isCapturing}
+      className={`
+        inline-flex items-center justify-center rounded-md text-sm font-medium 
+        transition-colors focus-visible:outline-none focus-visible:ring-2 
+        focus-visible:ring-offset-2 h-10 px-4 py-2
+        ${photos.length >= MAX_PHOTOS || !isCameraOn || isCapturing
+          ? 'bg-gray-300 cursor-not-allowed'
+          : 'bg-blue-600 text-white shadow hover:bg-blue-700'}
+      `}
+    >
+      {isCapturing ? (
+        <span className="flex items-center">
+          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          连拍中...
+        </span>
+      ) : '拍照'}
+    </button>
+  );
+
+  // 修改 GIF 预览区域渲染逻辑
+  const renderGifPreviews = () => {
+    if (burstSets.length === 0) return null;
+
+    return (
+      <div className="space-y-8 mt-8">
+        <h3 className="text-lg font-medium">连拍预览</h3>
+        {burstSets.map((burstSet, index) => {
+          const photoIndex = photos.findIndex(p => p.id === burstSet.id);
+          if (photoIndex === -1) return null; // 如果找不到对应的主照片，不显示预览
+
+          return (
+            <div key={burstSet.id} className="space-y-4 border-b pb-8 last:border-b-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-500">
+                  照片 {photoIndex + 1} 的连拍预览
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* GIF 预览 */}
+                <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <img
+                    src={burstSet.gif}
+                    alt={`连拍 GIF ${photoIndex + 1}`}
+                    className="w-full object-contain"
+                  />
+                </div>
+
+                {/* 连拍原始照片预览 */}
+                <div className="grid grid-cols-5 gap-2">
+                  {burstSet.photos.map((photo, i) => (
+                    <div key={i} className="relative aspect-video rounded-lg overflow-hidden">
+                      <img
+                        src={photo}
+                        alt={`连拍照片 ${i + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                        {i + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // 显示错误信息
   if (error) {
     return (
@@ -459,20 +570,7 @@ const Camera = () => {
               ))}
             </div>
 
-            <button
-              onClick={capture}
-              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              className={`
-                inline-flex items-center justify-center rounded-md text-sm font-medium 
-                transition-colors focus-visible:outline-none focus-visible:ring-2 
-                focus-visible:ring-offset-2 h-10 px-4 py-2
-                ${photos.length >= MAX_PHOTOS || !isCameraOn
-                  ? 'bg-gray-300 cursor-not-allowed'
-                  : 'bg-blue-600 text-white shadow hover:bg-blue-700'}
-              `}
-            >
-              立即拍照
-            </button>
+            {renderCaptureButton()}
 
             <button
               onClick={startCountdown}
@@ -528,6 +626,9 @@ const Camera = () => {
           </DndContext>
         </div>
       )}
+
+      {/* 连拍预览区域 */}
+      {renderGifPreviews()}
 
       {/* 错误提示 */}
       {error && (
