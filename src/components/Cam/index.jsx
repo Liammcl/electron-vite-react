@@ -1,5 +1,11 @@
-import React, { useCallback, useRef, useState, useEffect, useMemo } from 'react';
-import Webcam from 'react-webcam';
+import React, {
+  useCallback,
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+} from "react";
+import Webcam from "react-webcam";
 import {
   DndContext,
   closestCenter,
@@ -8,18 +14,18 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-} from '@dnd-kit/core';
+} from "@dnd-kit/core";
 import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
   horizontalListSortingStrategy,
   useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { Button, Select } from 'antd';
-import gifshot from 'gifshot';
-import { useRootStore } from '@/context/rootContext';
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { Button, Select } from "antd";
+import gifshot from "gifshot";
+import { useRootStore } from "@/context/rootContext";
 const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
   const {
     attributes,
@@ -48,9 +54,9 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
       {...listeners}
       className={`
         relative group touch-none select-none
-        ${isActive ? 'scale-105' : ''}
-        ${isOver ? 'ring-2 ring-blue-500' : ''}
-        ${isDragging ? 'shadow-xl' : 'shadow-md'}
+        ${isActive ? "scale-105" : ""}
+        ${isOver ? "ring-2 ring-blue-500" : ""}
+        ${isDragging ? "shadow-xl" : "shadow-md"}
         rounded-lg transition-all duration-200
       `}
     >
@@ -67,8 +73,17 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
         }}
         className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fillRule="evenodd"
+            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
       {isOver && !isActive && (
@@ -84,7 +99,7 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
 };
 
 const Camera = () => {
-  const {photos,setPhotos}=useRootStore()
+  const { photos, setPhotos } = useRootStore();
   const webcamRef = useRef(null);
   const [burstSets, setBurstSets] = useState([]);
   const [isCameraOn, setIsCameraOn] = useState(true);
@@ -105,17 +120,19 @@ const Camera = () => {
   useEffect(() => {
     async function checkCameraPermission() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
         setHasPermission(true);
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       } catch (err) {
-        console.error('Camera error:', err);
+        console.error("Camera error:", err);
         setError(err.message);
         setHasPermission(false);
         setIsCameraOn(false);
       }
     }
-    
+
     checkCameraPermission();
   }, []);
 
@@ -124,16 +141,19 @@ const Camera = () => {
     async function getDevices() {
       try {
         // 先请求权限
-        await navigator.mediaDevices.getUserMedia({ video: true })
-          .then(stream => {
+        await navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then((stream) => {
             // 获取到权限后立即停止预览流
-            stream.getTracks().forEach(track => track.stop());
+            stream.getTracks().forEach((track) => track.stop());
           });
-        
+
         // 获取设备列表
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-        console.log('Available cameras:', videoDevices);
+        const videoDevices = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
+        console.log("Available cameras:", videoDevices);
         setCameras(videoDevices);
 
         // 如果有可用摄像头且未选择，则默认选择第一个
@@ -141,17 +161,17 @@ const Camera = () => {
           setSelectedCamera(videoDevices[0].deviceId);
         }
       } catch (err) {
-        console.error('Error accessing camera:', err);
-        setError('无法访问摄像头: ' + err.message);
+        console.error("Error accessing camera:", err);
+        setError("无法访问摄像头: " + err.message);
       }
     }
 
     getDevices();
 
     // 监听设备变化
-    navigator.mediaDevices.addEventListener('devicechange', getDevices);
+    navigator.mediaDevices.addEventListener("devicechange", getDevices);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', getDevices);
+      navigator.mediaDevices.removeEventListener("devicechange", getDevices);
     };
   }, []);
 
@@ -159,7 +179,7 @@ const Camera = () => {
   const capture = useCallback(async () => {
     try {
       if (!webcamRef.current) {
-        throw new Error('摄像头未初始化');
+        throw new Error("摄像头未初始化");
       }
 
       setIsCapturing(true);
@@ -169,62 +189,83 @@ const Camera = () => {
       for (let i = 0; i < BURST_COUNT; i++) {
         const imageSrc = webcamRef.current.getScreenshot();
         if (!imageSrc) {
-          throw new Error('无法获取照片');
+          throw new Error("无法获取照片");
         }
         burstShots.push(imageSrc);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise((resolve) => setTimeout(resolve, 200));
       }
 
       // 生成唯一ID，用于关联主照片和连拍组
       const burstId = Date.now().toString();
 
-      // 生成 GIF
-      gifshot.createGIF({
-        images: burstShots,
-        gifWidth: 480,
-        gifHeight: 360,
-        interval: 0.3,
-        progressCallback: (progress) => {
-          console.log('GIF 生成进度：', Math.round(progress * 100) + '%');
-        },
-      }, (obj) => {
-        if (!obj.error) {
-          // 将主照片和连拍数据一起保存
-          setPhotos(prevPhotos => [...prevPhotos, {
-            id: burstId,
-            src: burstShots[0]
-          }]);
-          
-          setBurstSets(prevSets => [...prevSets, {
-            id: burstId,
-            photos: burstShots,
-            gif: obj.image
-          }]);
-        } else {
-          console.error('GIF 生成失败：', obj.error);
-        }
-        setIsCapturing(false);
+      // 获取原始照片的尺寸
+      const img = new Image();
+      img.src = burstShots[0];
+      await new Promise((resolve) => {
+        img.onload = () => resolve();
       });
+      
+      // 生成 GIF
+      gifshot.createGIF(
+        {
+          images: burstShots,
+          gifWidth: img.naturalWidth,  // 使用原图宽度
+          gifHeight: img.naturalHeight, // 使用原图高度
+          interval: 0.3,
+          progressCallback: (progress) => {
+            console.log("GIF 生成进度：", Math.round(progress * 100) + "%");
+          },
+        },
+        (obj) => {
+          if (!obj.error) {
+            // 将主照片和连拍数据一起保存
+            setPhotos((prevPhotos) => [
+              ...prevPhotos,
+              {
+                id: burstId,
+                src: burstShots[0],
+              },
+            ]);
+
+            setBurstSets((prevSets) => [
+              ...prevSets,
+              {
+                id: burstId,
+                photos: burstShots,
+                gif: obj.image,
+              },
+            ]);
+          } else {
+            console.error("GIF 生成失败：", obj.error);
+          }
+          setIsCapturing(false);
+        }
+      );
 
       setError(null);
     } catch (err) {
-      console.error('拍照失败:', err);
+      console.error("拍照失败:", err);
       setError(err.message);
       setIsCapturing(false);
     }
   }, []);
 
   // 修改删除照片函数
-  const deletePhoto = useCallback((index) => {
-    const photoToDelete = photos[index];
-    setPhotos(prevPhotos => prevPhotos.filter((_, i) => i !== index));
-    setBurstSets(prevSets => prevSets.filter(set => set.id !== photoToDelete.id));
-  }, [photos]);
+  const deletePhoto = useCallback(
+    (index) => {
+      const photoToDelete = photos[index];
+      setPhotos((prevPhotos) => prevPhotos.filter((_, i) => i !== index));
+      setBurstSets((prevSets) =>
+        prevSets.filter((set) => set.id !== photoToDelete.id)
+      );
+    },
+    [photos]
+  );
 
   // 修改倒计时拍照功能
   const startCountdown = useCallback(() => {
     if (photos.length >= MAX_PHOTOS) {
-      setError('最多只能拍摄4张照片');
+      setError("最多只能拍摄4张照片");
       return;
     }
 
@@ -255,12 +296,15 @@ const Camera = () => {
   };
 
   // 更新视频约束
-  const videoConstraints = useMemo(() => ({
-    width: 1280,
-    height: 720,
-    deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
-    facingMode: selectedCamera ? undefined : facingMode,
-  }), [selectedCamera, facingMode]);
+  const videoConstraints = useMemo(
+    () => ({
+      width: 1280,
+      height: 720,
+      deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
+      facingMode: selectedCamera ? undefined : facingMode,
+    }),
+    [selectedCamera, facingMode]
+  );
 
   // 处理摄像头切换
   const handleCameraChange = async (deviceId) => {
@@ -269,7 +313,7 @@ const Camera = () => {
       setIsCameraOn(true);
       setError(null);
     } catch (err) {
-      console.error('切换摄像头失败:', err);
+      console.error("切换摄像头失败:", err);
       setError(`切换摄像头失败: ${err.message}`);
     }
   };
@@ -295,7 +339,7 @@ const Camera = () => {
   const handleDragStart = (event) => {
     const { active } = event;
     setActiveId(active.id);
-    document.body.style.cursor = 'grabbing';
+    document.body.style.cursor = "grabbing";
   };
 
   const handleDragOver = (event) => {
@@ -305,24 +349,24 @@ const Camera = () => {
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    
+
     if (active.id !== over?.id) {
       setPhotos((items) => {
-        const oldIndex = parseInt(active.id.split('-')[1]);
-        const newIndex = parseInt(over.id.split('-')[1]);
+        const oldIndex = parseInt(active.id.split("-")[1]);
+        const newIndex = parseInt(over.id.split("-")[1]);
         return arrayMove(items, oldIndex, newIndex);
       });
     }
-    
+
     setActiveId(null);
     setOverId(null);
-    document.body.style.cursor = '';
+    document.body.style.cursor = "";
   };
 
   const handleDragCancel = () => {
     setActiveId(null);
     setOverId(null);
-    document.body.style.cursor = '';
+    document.body.style.cursor = "";
   };
 
   // 确保摄像头初始化完成
@@ -330,7 +374,7 @@ const Camera = () => {
     if (selectedCamera && webcamRef.current && webcamRef.current.video) {
       // 等待视频准备就绪
       webcamRef.current.video.onloadedmetadata = () => {
-        console.log('摄像头已准备就绪');
+        console.log("摄像头已准备就绪");
       };
     }
   }, [selectedCamera]);
@@ -341,25 +385,33 @@ const Camera = () => {
     const handleDeviceChange = async () => {
       try {
         const devices = await navigator.mediaDevices.enumerateDevices();
-        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        const videoDevices = devices.filter(
+          (device) => device.kind === "videoinput"
+        );
         setCameras(videoDevices);
 
         // 检查当前选中的摄像头是否还存在
-        if (selectedCamera && !videoDevices.some(device => device.deviceId === selectedCamera)) {
+        if (
+          selectedCamera &&
+          !videoDevices.some((device) => device.deviceId === selectedCamera)
+        ) {
           // 如果当前选中的摄像头不存在了，切换到第一个可用的摄像头
           if (videoDevices.length > 0) {
             handleCameraChange(videoDevices[0].deviceId);
           }
         }
       } catch (err) {
-        console.error('获取设备列表失败:', err);
-        setError('获取设备列表失败: ' + err.message);
+        console.error("获取设备列表失败:", err);
+        setError("获取设备列表失败: " + err.message);
       }
     };
 
-    navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
     return () => {
-      navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        handleDeviceChange
+      );
     };
   }, [selectedCamera]);
 
@@ -369,23 +421,42 @@ const Camera = () => {
       onClick={capture}
       disabled={photos.length >= MAX_PHOTOS || !isCameraOn || isCapturing}
       className={`
-        inline-flex items-center justify-center rounded-md text-sm font-medium 
+        w-full inline-flex items-center justify-center rounded-md text-sm font-medium 
         transition-colors focus-visible:outline-none focus-visible:ring-2 
         focus-visible:ring-offset-2 h-10 px-4 py-2
-        ${photos.length >= MAX_PHOTOS || !isCameraOn || isCapturing
-          ? 'bg-gray-300 cursor-not-allowed'
-          : 'bg-blue-600 text-white shadow hover:bg-blue-700'}
+        ${
+          photos.length >= MAX_PHOTOS || !isCameraOn || isCapturing
+            ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+            : "bg-blue-600 text-white shadow hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+        }
       `}
     >
       {isCapturing ? (
         <span className="flex items-center">
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          <svg
+            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            ></circle>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
           </svg>
           连拍中...
         </span>
-      ) : '拍照'}
+      ) : (
+        "拍照"
+      )}
     </button>
   );
 
@@ -397,11 +468,14 @@ const Camera = () => {
       <div className="space-y-8 mt-8">
         <h3 className="text-lg font-medium">连拍预览</h3>
         {burstSets.map((burstSet, index) => {
-          const photoIndex = photos.findIndex(p => p.id === burstSet.id);
-          if (photoIndex === -1) return null; // 如果找不到对应的主照片，不显示预览
+          const photoIndex = photos.findIndex((p) => p.id === burstSet.id);
+          if (photoIndex === -1) return null;
 
           return (
-            <div key={burstSet.id} className="space-y-4 border-b pb-8 last:border-b-0">
+            <div
+              key={burstSet.id}
+              className="space-y-4 border-b pb-8 last:border-b-0"
+            >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-500">
                   照片 {photoIndex + 1} 的连拍预览
@@ -409,23 +483,26 @@ const Camera = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* GIF 预览 */}
-                <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                {/* GIF 预览 - 添加 aspect-video 和 object-contain 确保等比例缩放 */}
+                <div className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
                   <img
                     src={burstSet.gif}
                     alt={`连拍 GIF ${photoIndex + 1}`}
-                    className="w-full object-contain"
+                    className="absolute inset-0 w-full h-full object-contain"
                   />
                 </div>
 
                 {/* 连拍原始照片预览 */}
                 <div className="grid grid-cols-5 gap-2">
                   {burstSet.photos.map((photo, i) => (
-                    <div key={i} className="relative aspect-video rounded-lg overflow-hidden">
+                    <div
+                      key={i}
+                      className="relative aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden"
+                    >
                       <img
                         src={photo}
                         alt={`连拍照片 ${i + 1}`}
-                        className="w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-contain"
                       />
                       <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
                         {i + 1}
@@ -445,7 +522,10 @@ const Camera = () => {
   if (error) {
     return (
       <div className="container mx-auto p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <div
+          className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
           <strong className="font-bold">错误：</strong>
           <span className="block sm:inline">{error}</span>
           <p className="mt-2">请确保：</p>
@@ -475,9 +555,14 @@ const Camera = () => {
   if (hasPermission === false) {
     return (
       <div className="container mx-auto p-4">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+        <div
+          className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative"
+          role="alert"
+        >
           <strong className="font-bold">提示：</strong>
-          <span className="block sm:inline">需要摄像头权限才能使用此功能。</span>
+          <span className="block sm:inline">
+            需要摄像头权限才能使用此功能。
+          </span>
           <p className="mt-2">请在浏览器设置中允许访问摄像头，然后刷新页面。</p>
         </div>
       </div>
@@ -485,90 +570,89 @@ const Camera = () => {
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto xl:p-6 p-1 space-y-8">
+    <div className="w-full max-w-4xl mx-auto xl:p-6 p-1 space-y-8 dark:bg-gray-900 dark:text-white">
       {/* 标题和摄像头选择区域 */}
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight">拍照上传</h2>
-        
+          <h2 className="text-2xl font-semibold tracking-tight dark:text-white">拍照上传</h2>
         </div>
-        
+
         {/* 照片计数器 */}
-        <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-lg">
-          <span className="text-sm font-medium text-gray-700">已拍摄照片</span>
-          <span className="text-sm font-semibold bg-gray-200 px-2.5 py-0.5 rounded-full">
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-lg">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">已拍摄照片</span>
+          <span className="text-sm font-semibold bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2.5 py-0.5 rounded-full">
             {photos.length}/{MAX_PHOTOS}
           </span>
         </div>
       </div>
 
-      {/* 摄像头预览区域 */}
-      <div className="overflow-hidden rounded-xl border-0 md:border bg-white shadow-sm mx-[-8px] md:mx-0 border-x-2 md:border-x border-gray-200">
-        <div className="relative w-full">
-          {/* 修改这里的高度计算方式 */}
-          <div className="relative w-full h-[50vh] md:pb-[56.25%] md:h-auto">
-            {isCameraOn && (
-              <Webcam
-                ref={webcamRef}
-                audio={false}
-                screenshotFormat="image/jpeg"
-                videoConstraints={videoConstraints}
-                className="absolute inset-0 w-full h-full object-cover"
-                onUserMediaError={(err) => {
-                  console.error('摄像头错误:', err);
-                  setError('摄像头访问失败: ' + err.message);
-                  setIsCameraOn(false);
-                }}
-                onUserMedia={(stream) => {
-                  console.log('摄像头已连接');
-                  setError(null);
-                }}
-                mirrored={facingMode === "user"}
-              />
-            )}
-            
-            {/* 倒计时显示 */}
-            {countdown > 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <span className="text-6xl md:text-8xl text-white font-bold animate-pulse">
-                  {countdown}
-                </span>
-              </div>
-            )}
+      {/* 摄像头和控制区域 */}
+      <div className="flex flex-col md:flex-row gap-4">
+        {/* 摄像头预览区域 */}
+        <div className="flex-1 overflow-hidden rounded-xl border-0 md:border bg-white dark:bg-gray-800 shadow-sm border-gray-200 dark:border-gray-700">
+          <div className="relative w-full">
+            <div className="relative w-full aspect-video">
+              {isCameraOn && (
+                <Webcam
+                  ref={webcamRef}
+                  audio={false}
+                  screenshotFormat="image/jpeg"
+                  videoConstraints={videoConstraints}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onUserMediaError={(err) => {
+                    console.error("摄像头错误:", err);
+                    setError("摄像头访问失败: " + err.message);
+                    setIsCameraOn(false);
+                  }}
+                  onUserMedia={(stream) => {
+                    console.log("摄像头已连接");
+                    setError(null);
+                  }}
+                  mirrored={facingMode === "user"}
+                />
+              )}
+
+              {/* 倒计时显示 */}
+              {countdown > 0 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                  <span className="text-6xl md:text-8xl text-white font-bold animate-pulse">
+                    {countdown}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* 控制按钮组 - 优化移动端布局 */}
-        <div className="border-t p-4">
-          <div className="flex flex-col gap-4">
-            {/* 摄像头选择下拉框 */}
-            {cameras.length > 0 && (
-              <div className="w-full">
-                <Select
-                  variant='filled'
-                  value={selectedCamera}
-                  onChange={handleCameraChange}
-                  className="w-full"
-                  placeholder="选择摄像头"
-                  options={cameras.map((camera) => ({
-                    label: camera.label || `摄像头 ${cameras.indexOf(camera) + 1}`,
-                    value: camera.deviceId,
-                  }))}
-                />
-              </div>
-            )}
+        {/* 控制按钮组 - 右侧垂直布局 */}
+        <div className="md:w-64 space-y-4 p-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+          {/* 摄像头选择下拉框 */}
+          {cameras.length > 0 && (
+            <Select
+              variant="filled"
+              value={selectedCamera}
+              onChange={handleCameraChange}
+              className="w-full"
+              placeholder="选择摄像头"
+              options={cameras.map((camera) => ({
+                label: camera.label || `摄像头 ${cameras.indexOf(camera) + 1}`,
+                value: camera.deviceId,
+              }))}
+            />
+          )}
 
-            {/* 缩放控制按钮组 */}
+          {/* 缩放控制按钮组 */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">缩放级别</label>
             <div className="grid grid-cols-4 gap-2">
               {[1, 2, 3, 5].map((zoom) => (
                 <Button
                   key={zoom}
-                  type="primary"
                   onClick={() => setZoom(zoom)}
                   className={`
-                    ${zoomLevel === zoom 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    ${zoomLevel === zoom
+                      ? "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                      : "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     }
                   `}
                 >
@@ -576,34 +660,38 @@ const Camera = () => {
                 </Button>
               ))}
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              {renderCaptureButton()}
-              <Button
-              type='primary'
-                onClick={startCountdown}
-                disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-                className={`
-                  ${photos.length >= MAX_PHOTOS || !isCameraOn
-                    ? 'bg-gray-300 cursor-not-allowed'
-                    : 'bg-indigo-600 text-white shadow hover:bg-indigo-700'}
-                `}
-              >
-                3秒倒计时
-              </Button>
-            </div>
+          {/* 拍照按钮组 */}
+          <div className="space-y-2">
+            {renderCaptureButton()}
+
+            <Button
+              type="primary"
+              onClick={startCountdown}
+              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+              className={`
+                w-full
+                ${photos.length >= MAX_PHOTOS || !isCameraOn
+                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                  : "bg-indigo-600 text-white shadow hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                }
+              `}
+            >
+              3秒倒计时
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* 照片预览区域 - 优化网格布局 */}
+      {/* 照片预览区域 */}
       {photos.length > 0 && (
-        <div className="space-y-4 mt-8">
+        <div className="space-y-4 mt-8 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">照片预览</h3>
             <span className="text-sm text-gray-500">拖拽可调整顺序</span>
           </div>
-          
+
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -633,16 +721,28 @@ const Camera = () => {
         </div>
       )}
 
-      {/* 连拍预览区域 */}
-      {renderGifPreviews()}
+      {/* GIF预览区域 */}
+      {burstSets.length > 0 && (
+        <div className="space-y-4 mt-8 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          {renderGifPreviews()}
+        </div>
+      )}
 
       {/* 错误提示 */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/50 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              <svg
+                className="h-5 w-5 text-red-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clipRule="evenodd"
+                />
               </svg>
             </div>
             <div className="ml-3">

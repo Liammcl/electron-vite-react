@@ -4,7 +4,7 @@ export default function LayoutContainer({children}) {
   return (
     <Layout className="h-screen overflow-hidden flex flex-col w-full bg-background">
     <Header/>
-    <div className="w-full h-full overflow-auto">
+    <div className="w-full h-auto overflow-auto">
      {children}
     </div>
     </Layout>

@@ -1,13 +1,18 @@
-import React from 'react'
+import React,{Fragment} from 'react'
 import ChangeTheme from '@/components/ChangeTheme'
 import ChangeLang from '@/components/ChangLang'
 import { useNavigate } from 'react-router-dom'
 import SplitText from '@/components/spring/SplitText/SplitText'
+import { useLocation } from 'react-router-dom';
 
 export default function Header() {
-  const navigate = useNavigate()
+  const blackList=['/']
+const {pathname}=useLocation()
+const navigate=useNavigate()
+
   return (
-    <div className='w-full h-[45px] bg-white text-black dark:bg-black dark:text-white flex justify-between px-10 py-2 '>
+    <Fragment>
+    {!blackList.includes(pathname)?<div className='w-full h-[45px] bg-white text-black dark:bg-black dark:text-white flex justify-between px-10 py-2 '>
       <div className='cursor-pointer' onClick={() => navigate('/')}>
         <SplitText
           text="Uppeta"
@@ -24,6 +29,7 @@ export default function Header() {
         <ChangeTheme />
         <ChangeLang />
       </div>
-    </div>
+    </div>:null}
+    </Fragment>
   )
 }

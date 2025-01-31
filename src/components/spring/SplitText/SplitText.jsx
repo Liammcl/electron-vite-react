@@ -19,7 +19,6 @@ const SplitText = ({
   const animatedCount = useRef(0);
 
   useEffect(() => {
-    // 如果浏览器不支持 IntersectionObserver，直接设置为可见
     if (!('IntersectionObserver' in window)) {
       console.log('IntersectionObserver not supported, setting inView to true');
       setInView(true);

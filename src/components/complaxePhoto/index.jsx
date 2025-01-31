@@ -45,16 +45,14 @@ export default function ComplaxePhone() {
       console.error('图片加载失败:', error)
     }
   }
-useEffect(()=>{
-  generate()
-},[active])
+
   return (
     <div>
       <canvas ref={canvasRef}></canvas>
       <ul className='flex justify-start items-center gap-2'> 
         {
           framelist.map((v,index)=>(
-          <li key={index} className={`${active===index? 'border-2  border-primary-500':'border-2 border-transparent'}  rounded-md select-none cursor-pointer `}  onClick={()=>{setActive(index)}}>
+          <li key={index} className={`${active===index? 'border-2  border-primary-500':'border-2 border-transparent'}  rounded-md select-none cursor-pointer `}  onClick={()=>{setActive(index); generate()}}>
             <img draggable={false} src={v} width={200} height={300} alt="" />
           </li>
           ))
