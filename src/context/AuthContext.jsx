@@ -2,18 +2,36 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { supabase } from "@/config/supabase";
 import { message } from "antd";
 import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { supabaseService } from "@/hooks/supabaseService";
-import { v4 as uuidv4 } from "uuid";
-
+import { useRootStore } from "@/context/rootContext";
 const AuthContext = createContext({});
 
 export const AuthProvider = ({ children }) => {
+  
+  const {setHasPermission,setError,setIsCameraOn}=useRootStore()
+
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [user, setUser] = useState({});
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    async function checkCameraPermission() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+        setHasPermission(true);
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err) {
+        console.error("Camera error:", err);
+        setError(err.message);
+        setHasPermission(false);
+        setIsCameraOn(false);
+      }
+    }
 
+    checkCameraPermission();
+  }, []);
   useEffect(() => {
     const hash = window.location.hash.substring(1);
     const hashParams = new URLSearchParams(hash);

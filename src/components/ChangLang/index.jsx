@@ -24,7 +24,7 @@ export default function ChangeLange() {
   const items = langList.map(item => ({
     key: item.code,
     label: (
-      <div className="px-4 py-2 hover:bg-gray-100">
+      <div className="px-4 py-2">
         {item.name}
       </div>
     ),
@@ -36,14 +36,15 @@ export default function ChangeLange() {
       menu={{ items }}
       placement="bottomRight"
       trigger={['hover']}
-      overlayClassName="min-w-[150px] rounded-lg shadow-lg"
+      overlayClassName="min-w-[150px] rounded-lg shadow-lg dark:bg-gray-800"
     >
-      <button className="flex items-center space-x-2 px-3 py-2 rounded-full hover:bg-gray-100">
-        <GlobalOutlined className="text-gray-600" />
-        <span className="text-gray-700">
+      <div className="flex items-center space-x-2 px-3 py-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+        <GlobalOutlined className=" text-gray-600 dark:text-gray-400" />
+        <span className="text-gray-700 hidden md:block  dark:text-gray-300">
           {langList.find(lang => lang.code === currentLanguage)?.name}
         </span>
-      </button>
+        <span className='md:hidden'>{currentLanguage}</span>
+      </div>
     </Dropdown>
   )
 }

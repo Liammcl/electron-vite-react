@@ -3,6 +3,7 @@ import { lazy } from 'react'
 // 使用懒加载导入组件
 const Home = lazy(() => import('@/views/Home'))
 const About = lazy(() => import('@/views/About'))
+const TakePhoto=lazy(()=>import('@/views/TakePhoto'))
 const Nofound = lazy(() => import('@/views/404'))
 export const routes = [
   {
@@ -18,6 +19,14 @@ export const routes = [
     element: About,
     meta: {
       title: '关于',
+      requiresAuth: false
+    }
+  },
+  {
+    path: '/takePhoto',
+    element: TakePhoto,
+    meta: {
+      title: '拍照区',
       requiresAuth: false
     }
   },

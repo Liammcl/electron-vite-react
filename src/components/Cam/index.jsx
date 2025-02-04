@@ -99,12 +99,9 @@ const SortablePhoto = ({ photo, index, onDelete, activeId, overId }) => {
 };
 
 const Camera = () => {
-  const { photos, setPhotos } = useRootStore();
+  const { photos, setPhotos,setIsCameraOn,setError,hasPermission,isCameraOn,error } = useRootStore();
   const webcamRef = useRef(null);
   const [burstSets, setBurstSets] = useState([]);
-  const [isCameraOn, setIsCameraOn] = useState(true);
-  const [hasPermission, setHasPermission] = useState(null);
-  const [error, setError] = useState(null);
   const [countdown, setCountdown] = useState(0);
   const [facingMode, setFacingMode] = useState("user");
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -116,25 +113,7 @@ const Camera = () => {
   const [isCapturing, setIsCapturing] = useState(false);
   const BURST_COUNT = 5;
 
-  // 检查摄像头权限
-  useEffect(() => {
-    async function checkCameraPermission() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        setHasPermission(true);
-        stream.getTracks().forEach((track) => track.stop());
-      } catch (err) {
-        console.error("Camera error:", err);
-        setError(err.message);
-        setHasPermission(false);
-        setIsCameraOn(false);
-      }
-    }
-
-    checkCameraPermission();
-  }, []);
+ 
 
   // 获取摄像头列表
   useEffect(() => {
@@ -204,12 +183,12 @@ const Camera = () => {
       await new Promise((resolve) => {
         img.onload = () => resolve();
       });
-      
+
       // 生成 GIF
       gifshot.createGIF(
         {
           images: burstShots,
-          gifWidth: img.naturalWidth,  // 使用原图宽度
+          gifWidth: img.naturalWidth, // 使用原图宽度
           gifHeight: img.naturalHeight, // 使用原图高度
           interval: 0.3,
           progressCallback: (progress) => {
@@ -574,12 +553,16 @@ const Camera = () => {
       {/* 标题和摄像头选择区域 */}
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <h2 className="text-2xl font-semibold tracking-tight dark:text-white">拍照上传</h2>
+          <h2 className="text-2xl font-semibold tracking-tight dark:text-white">
+            拍照上传
+          </h2>
         </div>
 
         {/* 照片计数器 */}
         <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 px-4 py-3 rounded-lg">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">已拍摄照片</span>
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            已拍摄照片
+          </span>
           <span className="text-sm font-semibold bg-gray-200 dark:bg-gray-700 dark:text-gray-200 px-2.5 py-0.5 rounded-full">
             {photos.length}/{MAX_PHOTOS}
           </span>
@@ -643,16 +626,19 @@ const Camera = () => {
 
           {/* 缩放控制按钮组 */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">缩放级别</label>
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              缩放级别
+            </label>
             <div className="grid grid-cols-4 gap-2">
               {[1, 2, 3, 5].map((zoom) => (
                 <Button
                   key={zoom}
                   onClick={() => setZoom(zoom)}
                   className={`
-                    ${zoomLevel === zoom
-                      ? "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                      : "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                    ${
+                      zoomLevel === zoom
+                        ? "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                        : "bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
                     }
                   `}
                 >
@@ -672,9 +658,10 @@ const Camera = () => {
               disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
               className={`
                 w-full
-                ${photos.length >= MAX_PHOTOS || !isCameraOn
-                  ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
-                  : "bg-indigo-600 text-white shadow hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                ${
+                  photos.length >= MAX_PHOTOS || !isCameraOn
+                    ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                    : "bg-indigo-600 text-white shadow hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
                 }
               `}
             >

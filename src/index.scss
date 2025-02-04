@@ -7,6 +7,9 @@ html,body, #root{
   overflow: hidden;
   font-family: 'Poppins', system-ui, sans-serif;
 }
+div,h,span{
+  @apply select-none dark:text-white text-black; 
+}
 @layer base {
 
   :root {
@@ -71,5 +74,6 @@ html,body, #root{
     --ring: 224 76% 48%;
   }
 }
+
 
 
