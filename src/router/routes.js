@@ -4,6 +4,7 @@ import { lazy } from 'react'
 const Home = lazy(() => import('@/views/Home'))
 const About = lazy(() => import('@/views/About'))
 const TakePhoto=lazy(()=>import('@/views/TakePhoto'))
+const SelectFrame=lazy(()=>import('@/views/SelectFrame'))
 const Nofound = lazy(() => import('@/views/404'))
 export const routes = [
   {
@@ -27,6 +28,14 @@ export const routes = [
     element: TakePhoto,
     meta: {
       title: '拍照区',
+      requiresAuth: false
+    }
+  },
+  {
+    path: '/selectFrame',
+    element: SelectFrame,
+    meta: {
+      title: '选择相框',
       requiresAuth: false
     }
   },

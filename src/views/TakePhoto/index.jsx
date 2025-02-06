@@ -1,14 +1,14 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, Fragment } from "react";
 import LogoWarp from "@/utils/logoWarp";
 import { useRootStore } from "@/context/rootContext";
 import Webcam from "react-webcam";
 import { Switch, Skeleton, Progress } from "antd";
-import Button from "@/components/ui/button";
-
+import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 const PhotoGrid = ({ photos, MAX_PHOTOS, onDelete }) => {
   const placeholders = Array(MAX_PHOTOS).fill(null);
   return (
-    <ul className="flex md:flex-col flex-row gap-4  ">
+    <ul className=" w-full flex md:flex-col flex-row gap-4  justify-center items-center">
       {placeholders.map((_, index) => {
         const photo = photos[index];
         return (
@@ -16,10 +16,9 @@ const PhotoGrid = ({ photos, MAX_PHOTOS, onDelete }) => {
             key={index}
             className={`
               relative aspect-square rounded-lg overflow-hidden group
-              ${
-                !photo
-                  ? "bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600"
-                  : ""
+              ${!photo
+                ? "bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-300 dark:border-gray-600"
+                : ""
               }
             `}
           >
@@ -54,6 +53,7 @@ const PhotoGrid = ({ photos, MAX_PHOTOS, onDelete }) => {
 
 export default function TakePhoto() {
   const MAX_PHOTOS = 4;
+  const navigate = useNavigate()
   const { photos, setPhotos, isCameraOn, error, setError } = useRootStore();
   const webcamRef = useRef(null);
   const [countdown, setCountdown] = useState(0);
@@ -101,14 +101,14 @@ export default function TakePhoto() {
       setIsCountdownMode(false);
       return;
     }
-    
+
     setCountdown(3);
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           capture();
-          
+
           // 如果还没拍够且倒计时模式仍然开启，继续下一张
           if (photos.length + 1 < MAX_PHOTOS && isCountdownMode) {
             setTimeout(startCountdown, 500); // 短暂延迟后开始下一次倒计时
@@ -182,117 +182,128 @@ export default function TakePhoto() {
   }, [setPhotos]);
 
   return (
-    <div className="h-full w-full p-8">
-      <div className="flex items-center justify-between">
-        <LogoWarp />
-        <Progress
-          type="circle"
-          percent={countdown > 0 ? ((4 - countdown) / 4) * 100 : 0}
-          size={50}
-          format={() => countdown > 0 ? countdown : "0"}
-          strokeWidth={6}
-          className="dark:filter dark:invert [&_.ant-progress-circle-trail]:dark:stroke-gray-800"
-          strokeColor="#000"
-        />
-      </div>
-
-      <div className="flex items-center flex-col justify-center -mt-6 md:-mt-10 gap-4">
-        <div className="text-sm md:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200">
-          请看上方镜头
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm md:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200">
-            {photos.length}/{MAX_PHOTOS}
-          </span>
-        </div>
-        <div className="flex items-center flex-col md:flex-row  gap-8 w-auto h-full">
-          <div className="flex gap-4 w-auto h-full">
- <div className="w-full max-w-6xl aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative min-h-[400px]">
-            {isCameraOn && (
-              <>
-                <Webcam
-                  ref={webcamRef}
-                  audio={false}
-                  screenshotFormat="image/jpeg"
-                  className={`w-full h-full object-cover ${
-                    isLoading ? "hidden" : "block"
-                  }`}
-                  videoConstraints={{
-                    width: 1280,
-                    height: 720,
-                    facingMode: "user",
-                  }}
-                  mirrored={isMirrored}
-                />
-
-                {isLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Skeleton.Image
-                      active
-                      className="!w-full !h-full"
-                      style={{
-                        width: "100%",
-                        height: "400px",
-                        margin: 0,
-                      }}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-            {countdown > 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-                <span className="text-6xl md:text-8xl text-white font-bold animate-pulse">
-                  {countdown}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className=" flex justify-center flex-col gap-4 mt-6">
-            <div className="flex items-center space-x-2">
-              <Switch
-                checked={isMirrored}
-                onChange={handleMirrorToggle}
-                className="bg-gray-300 dark:bg-gray-600"
-                disabled={isLoading}
-                style={{
-                  backgroundColor: isMirrored ? "#1890ff" : undefined,
-                }}
-              />
-              <label className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300">
-                镜像模式 {isLoading && "(切换中...)"}
-              </label>
-            </div>
-            <Button
-              onClick={capture}
-              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              className="rounded-full w-10 h-10 !p-0"
-              variant="outline"
-            />
-
-            <Button
-              onClick={handleCountdownMode}
-              disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              variant={photos.length >= MAX_PHOTOS || !isCameraOn ? "ghost" : "outline"}
-            >
-              {isCountdownMode ? "停止拍摄" : "倒计时模式"}
-            </Button>
-          </div>
-          </div>
-          <PhotoGrid
-            photos={photos}
-            MAX_PHOTOS={MAX_PHOTOS}
-            onDelete={handleDeletePhoto}
+    <Fragment>
+      <div className="h-full w-full p-8  flex flex-col justify-between">
+        <div className="flex items-center justify-between">
+          <LogoWarp />
+          <Progress
+            type="circle"
+            percent={countdown > 0 ? ((4 - countdown) / 4) * 100 : 0}
+            size={50}
+            format={() => countdown > 0 ? countdown : "0"}
+            strokeWidth={6}
+            className="dark:filter dark:invert [&_.ant-progress-circle-trail]:dark:stroke-gray-800"
+            strokeColor="#000"
           />
         </div>
-      </div>
-      {error && (
-        <div className="fixed bottom-4 left-4 right-4 bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-lg">
-          <p className="text-sm">{error}</p>
+
+        <div className="flex items-center flex-col justify-center -mt-6 md:-mt-10 gap-4 w-full h-auto">
+          <div className="text-sm md:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200">
+            请看上方镜头
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm md:text-xl xl:text-2xl font-bold text-gray-800 dark:text-gray-200">
+              {photos.length}/{MAX_PHOTOS}
+            </span>
+          </div>
+          <div className="flex items-center flex-col md:flex-row  gap-8 w-auto h-full">
+            <div className="flex gap-4 h-full">
+              <div className="w-auto max-w-6xl aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative min-h-[280px] md:min-h-[400px]">
+                {isCameraOn && (
+                  <>
+                    <Webcam
+                      ref={webcamRef}
+                      audio={false}
+                      screenshotFormat="image/jpeg"
+                      className={`w-full h-full object-cover ${isLoading ? "hidden" : "block"}`}
+                      videoConstraints={{
+                        facingMode: "user",
+                        width: { min: 320, ideal: 1280 },
+                        height: { min: 240, ideal: 720 }
+                      }}
+                      mirrored={isMirrored}
+                    />
+
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Skeleton.Image
+                          active
+                          className="!w-full !h-full"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            margin: 0,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+                {countdown > 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                    <span className="text-4xl md:text-6xl lg:text-8xl text-white font-bold animate-pulse">
+                      {countdown}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className=" flex justify-center flex-col gap-4 mt-6">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    checked={isMirrored}
+                    onChange={handleMirrorToggle}
+                    className="bg-gray-300 dark:bg-gray-600"
+                    disabled={isLoading}
+                    style={{
+                      backgroundColor: isMirrored ? "#1890ff" : undefined,
+                    }}
+                  />
+                  <label className="text-sm font-medium leading-none text-gray-700 dark:text-gray-300">
+                    镜像模式 {isLoading && "(切换中...)"}
+                  </label>
+                </div>
+                <Button
+                  onClick={capture}
+                  disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+                  className="rounded-full w-10 h-10 !p-0"
+                  variant="outline"
+                />
+
+                <Button
+                  onClick={handleCountdownMode}
+                  disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
+                  variant={photos.length >= MAX_PHOTOS || !isCameraOn ? "ghost" : "outline"}
+                >
+                  {isCountdownMode ? "停止拍摄" : "倒计时模式"}
+                </Button>
+              </div>
+            </div>
+            <PhotoGrid
+              photos={photos}
+              MAX_PHOTOS={MAX_PHOTOS}
+              onDelete={handleDeletePhoto}
+            />
+          </div>
         </div>
-      )}
-    </div>
+        {error && (
+          <div className="fixed bottom-4 left-4 right-4 bg-red-50 dark:bg-red-900/50 text-red-800 dark:text-red-200 p-4 rounded-lg shadow-lg">
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+        <div className="  w-full  flex justify-between items-center">
+          <div className="flex items-center gap-2" onClick={() => navigate('/')}><span className="material-symbols-rounded">
+            arrow_back
+          </span>返回</div>
+          <div className="flex items-center gap-2" onClick={() => navigate('/selectFrame')}>下一步
+            <span className="material-symbols-rounded">
+              arrow_forward
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </Fragment>
   );
 }
