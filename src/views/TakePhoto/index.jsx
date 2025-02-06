@@ -2,14 +2,13 @@ import React, { useRef, useState, useCallback } from "react";
 import LogoWarp from "@/utils/logoWarp";
 import { useRootStore } from "@/context/rootContext";
 import Webcam from "react-webcam";
-import { Switch, Skeleton } from "antd";
+import { Switch, Skeleton, Progress } from "antd";
+import Button from "@/components/ui/button";
 
 const PhotoGrid = ({ photos, MAX_PHOTOS, onDelete }) => {
-  // 生成空占位数组
   const placeholders = Array(MAX_PHOTOS).fill(null);
-
   return (
-    <ul className="flex flex-col gap-4  ">
+    <ul className="flex md:flex-col flex-row gap-4  ">
       {placeholders.map((_, index) => {
         const photo = photos[index];
         return (
@@ -60,6 +59,7 @@ export default function TakePhoto() {
   const [countdown, setCountdown] = useState(0);
   const [isMirrored, setIsMirrored] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCountdownMode, setIsCountdownMode] = useState(false);
 
   // 拍照功能
   const capture = useCallback(async () => {
@@ -95,23 +95,42 @@ export default function TakePhoto() {
     }
   }, [setPhotos, isMirrored]);
 
-  // 倒计时拍照
+  // 修改倒计时拍照功能
   const startCountdown = useCallback(() => {
-    if (photos.length >= MAX_PHOTOS) return;
+    if (photos.length >= MAX_PHOTOS) {
+      setIsCountdownMode(false);
+      return;
+    }
+    
     setCountdown(3);
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
           capture();
+          
+          // 如果还没拍够且倒计时模式仍然开启，继续下一张
+          if (photos.length + 1 < MAX_PHOTOS && isCountdownMode) {
+            setTimeout(startCountdown, 500); // 短暂延迟后开始下一次倒计时
+          } else {
+            setIsCountdownMode(false);
+          }
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
+  }, [capture, photos.length, isCountdownMode]);
 
-    return () => clearInterval(timer);
-  }, [capture, photos.length]);
+  // 处理倒计时模式切换
+  const handleCountdownMode = useCallback(() => {
+    if (!isCountdownMode && photos.length < MAX_PHOTOS) {
+      setIsCountdownMode(true);
+      startCountdown();
+    } else {
+      setIsCountdownMode(false);
+    }
+  }, [isCountdownMode, photos.length, startCountdown]);
 
   // 修改镜像切换处理函数
   const handleMirrorToggle = useCallback(
@@ -160,15 +179,21 @@ export default function TakePhoto() {
   // 删除照片处理函数
   const handleDeletePhoto = useCallback((index) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+  }, [setPhotos]);
 
   return (
     <div className="h-full w-full p-8">
       <div className="flex items-center justify-between">
         <LogoWarp />
-        <div className="text-sm md:text-base font-medium text-gray-700 dark:text-gray-300">
-          {countdown > 0 ? `${countdown}秒后拍照` : "准备就绪"}
-        </div>
+        <Progress
+          type="circle"
+          percent={countdown > 0 ? ((4 - countdown) / 4) * 100 : 0}
+          size={50}
+          format={() => countdown > 0 ? countdown : "0"}
+          strokeWidth={6}
+          className="dark:filter dark:invert [&_.ant-progress-circle-trail]:dark:stroke-gray-800"
+          strokeColor="#000"
+        />
       </div>
 
       <div className="flex items-center flex-col justify-center -mt-6 md:-mt-10 gap-4">
@@ -181,8 +206,9 @@ export default function TakePhoto() {
             {photos.length}/{MAX_PHOTOS}
           </span>
         </div>
-        <div className="flex items-center gap-8">
-          <div className="w-full max-w-6xl aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative min-h-[400px]">
+        <div className="flex items-center flex-col md:flex-row  gap-8 w-auto h-full">
+          <div className="flex gap-4 w-auto h-full">
+ <div className="w-full max-w-6xl aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden relative min-h-[400px]">
             {isCameraOn && (
               <>
                 <Webcam
@@ -200,7 +226,6 @@ export default function TakePhoto() {
                   mirrored={isMirrored}
                 />
 
-                {/* 骨架屏 */}
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Skeleton.Image
@@ -216,7 +241,6 @@ export default function TakePhoto() {
                 )}
               </>
             )}
-
             {countdown > 0 && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm">
                 <span className="text-6xl md:text-8xl text-white font-bold animate-pulse">
@@ -241,28 +265,22 @@ export default function TakePhoto() {
                 镜像模式 {isLoading && "(切换中...)"}
               </label>
             </div>
-            <button
+            <Button
               onClick={capture}
               disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              className=" dark:bg-gray-300 bg-gray-600 rounded-full w-10 h-10 text-sm font-medium transition-colors"
-            ></button>
+              className="rounded-full w-10 h-10 !p-0"
+              variant="outline"
+            />
 
-            <button
-              onClick={startCountdown}
+            <Button
+              onClick={handleCountdownMode}
               disabled={photos.length >= MAX_PHOTOS || !isCameraOn}
-              className={`
-            px-6 py-3 rounded-full text-sm font-medium transition-colors
-            ${
-              photos.length >= MAX_PHOTOS || !isCameraOn
-                ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
-                : "bg-indigo-600 text-white hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600"
-            }
-          `}
+              variant={photos.length >= MAX_PHOTOS || !isCameraOn ? "ghost" : "outline"}
             >
-              倒计时拍照
-            </button>
+              {isCountdownMode ? "停止拍摄" : "倒计时模式"}
+            </Button>
           </div>
-          {/* 照片网格 */}
+          </div>
           <PhotoGrid
             photos={photos}
             MAX_PHOTOS={MAX_PHOTOS}
